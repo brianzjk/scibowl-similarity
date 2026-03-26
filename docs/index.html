@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Science Bowl Similarity</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f3efe7;
+      --panel: #fffdf9;
+      --ink: #171512;
+      --muted: #685f55;
+      --line: #d7cdc0;
+      --accent: #0f5a4a;
+      --accent-2: #8c3b24;
+      --accent-3: #7f6a17;
+      --warn: #9d5d00;
+      --danger: #8f233b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(15, 90, 74, 0.12), transparent 30%),
+        radial-gradient(circle at top right, rgba(140, 59, 36, 0.08), transparent 26%),
+        linear-gradient(180deg, #f8f3ea 0%, var(--bg) 100%);
+    }
+    .shell {
+      max-width: 1380px;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      gap: 18px;
+    }
+    .hero, .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: 0 18px 40px rgba(23, 21, 18, 0.05);
+    }
+    .hero, .panel {
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+    }
+    .hero {
+      padding: 22px 24px;
+    }
+    .hero-top, .badge-row, .pill-row, .field-row, .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+    .hero-top {
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+    }
+    h1, h2 {
+      margin: 0;
+      font-weight: 700;
+    }
+    h1 {
+      font-size: 34px;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+    }
+    h2 {
+      font-size: 22px;
+    }
+    p {
+      margin: 0;
+      line-height: 1.55;
+    }
+    .lede {
+      max-width: 840px;
+      color: var(--muted);
+      font-size: 17px;
+    }
+    .badge, .pill {
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      padding: 8px 12px;
+      font-size: 14px;
+      background: rgba(255, 255, 255, 0.7);
+      color: var(--muted);
+    }
+    .badge strong, .pill strong {
+      color: var(--ink);
+    }
+    .instructions {
+      grid-template-columns: 1.3fr 1fr;
+    }
+    .instruction-copy {
+      display: grid;
+      gap: 12px;
+    }
+    .instruction-note {
+      border-left: 4px solid var(--accent);
+      padding-left: 14px;
+      color: var(--muted);
+    }
+    .code-card {
+      background: #1a1917;
+      color: #f4eee1;
+      border-radius: 16px;
+      padding: 14px;
+      overflow-x: auto;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    code, pre {
+      font-family: Consolas, "SFMono-Regular", Menlo, monospace;
+    }
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    label {
+      font-size: 14px;
+      color: var(--muted);
+    }
+    input, select, button {
+      font: inherit;
+    }
+    input[type="text"], input[type="number"], select, button {
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #fff;
+      padding: 10px 12px;
+      color: var(--ink);
+    }
+    input[type="file"] {
+      max-width: 100%;
+      color: var(--muted);
+    }
+    .wide-input {
+      min-width: 360px;
+      flex: 1 1 360px;
+    }
+    .small-input {
+      width: 96px;
+    }
+    button {
+      cursor: pointer;
+      transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+    }
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 18px rgba(23, 21, 18, 0.08);
+    }
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    button.secondary {
+      background: #fff7ed;
+      border-color: #e7c4a9;
+      color: #5d341d;
+    }
+    button.ghost {
+      background: transparent;
+    }
+    button:disabled {
+      cursor: wait;
+      opacity: 0.6;
+      transform: none;
+      box-shadow: none;
+    }
+    .status-banner {
+      border-radius: 16px;
+      padding: 14px 16px;
+      border: 1px solid rgba(15, 90, 74, 0.18);
+      background: rgba(15, 90, 74, 0.07);
+      color: #194f43;
+    }
+    .status-banner.warn {
+      border-color: rgba(157, 93, 0, 0.18);
+      background: rgba(157, 93, 0, 0.08);
+      color: #845100;
+    }
+    .status-banner.error {
+      border-color: rgba(143, 35, 59, 0.2);
+      background: rgba(143, 35, 59, 0.08);
+      color: #7a1c34;
+    }
+    .status-banner strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 16px;
+    }
+    .meta {
+      display: grid;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .meta strong {
+      color: var(--ink);
+    }
+    .question, .answer, .choices {
+      border-radius: 14px;
+      padding: 14px;
+      white-space: pre-wrap;
+      line-height: 1.55;
+      border: 1px solid rgba(15, 90, 74, 0.14);
+      background: rgba(15, 90, 74, 0.05);
+    }
+    .answer {
+      border-color: rgba(140, 59, 36, 0.14);
+      background: rgba(140, 59, 36, 0.05);
+    }
+    .choices {
+      border-color: rgba(127, 106, 23, 0.18);
+      background: rgba(127, 106, 23, 0.07);
+    }
+    .result-list {
+      display: grid;
+      gap: 8px;
+      max-height: 440px;
+      overflow: auto;
+    }
+    .result-row {
+      width: 100%;
+      text-align: left;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px 14px;
+      display: grid;
+      gap: 6px;
+    }
+    .result-row.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(15, 90, 74, 0.12);
+      background: rgba(15, 90, 74, 0.06);
+    }
+    .result-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: baseline;
+      flex-wrap: wrap;
+    }
+    .result-sub, .muted {
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .empty-state {
+      color: var(--muted);
+      font-style: italic;
+    }
+    @media (max-width: 1040px) {
+      .instructions, .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    @media (max-width: 700px) {
+      .shell {
+        padding: 16px;
+      }
+      h1 {
+        font-size: 29px;
+      }
+      .wide-input {
+        min-width: 0;
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <h1>Science Bowl Similarity Browser</h1>
+          <p class="lede">
+            Static client-side review app for checking an uploaded MIT-format question sheet against the public corpus embedding bundle and against itself.
+            Upload bundles are read from your machine in the browser. This page does not need a backend to run similarity search.
+          </p>
+        </div>
+        <div class="badge-row">
+          <span class="badge">Corpus model <strong id="hero-model">not loaded</strong></span>
+          <span class="badge">Corpus questions <strong id="hero-count">0</strong></span>
+          <span class="badge">Local-only upload <strong>enabled</strong></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel instructions">
+      <div class="instruction-copy">
+        <h2>Generate Your Local Upload Bundle</h2>
+        <p>
+          Run the embedding model on your own machine, then load the resulting JSON bundle into this page.
+          The bundle must be generated with the same embedding model and settings as the hosted corpus bundle.
+        </p>
+        <div class="instruction-note">
+          This website expects `mixedbread-ai/mxbai-embed-large-v1` with the repo's default input format and `--include-answer` enabled.
+        </div>
+        <div class="code-card">
+          <pre>python -m pip install -e ".[embeddings]"
+python -m scibowl.cli.main build-browser-upload-bundle `
+  "YOUR_QUESTIONS.csv" `
+  "your_upload_bundle.json" `
+  --source-id your_upload `
+  --tournament "Your Tournament" `
+  --year 2026</pre>
+        </div>
+        <p class="muted">
+          The CSV should use the MIT columns documented in this repo. After the command finishes, load `your_upload_bundle.json` below.
+        </p>
+        <p class="muted">
+          Required CSV columns: `Type`, `Category`, `Format`, `Question`, `W`, `X`, `Y`, `Z`, `Answer`, `Accept`, `Do Not Accept`.
+        </p>
+      </div>
+      <div class="instruction-copy">
+        <h2>How This Page Works</h2>
+        <p>1. Load the public corpus manifest, usually `./corpus/manifest.json` on the hosted site.</p>
+        <p>2. Pick your local upload bundle JSON from disk.</p>
+        <p>3. Click <strong>Analyze Upload</strong> to compute upload-vs-corpus and within-upload matches in your browser.</p>
+        <p>4. Filter by similarity and category, then review the pairs directly in the side-by-side viewer.</p>
+        <p class="muted">No CSV or embedding data is posted to a server by this page.</p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Inputs</h2>
+      <div class="field-row">
+        <label for="manifest-url">Corpus manifest</label>
+        <input id="manifest-url" class="wide-input" type="text" value="./corpus/manifest.json">
+        <button id="load-corpus" class="secondary">Load Corpus</button>
+      </div>
+      <div class="field-row">
+        <label for="upload-bundle">Upload bundle JSON</label>
+        <input id="upload-bundle" type="file" accept=".json,application/json">
+      </div>
+      <div class="field-row">
+        <label for="threshold-input">Min similarity</label>
+        <input id="threshold-input" class="small-input" type="number" min="0" max="1" step="0.001" value="0.900">
+        <label for="top-k-input">Top K per upload question</label>
+        <input id="top-k-input" class="small-input" type="number" min="1" step="1" value="10">
+        <button id="analyze-button" class="primary">Analyze Upload</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div id="status-banner" class="status-banner">
+        <strong>Status</strong>
+        <span id="status-message">Load the corpus manifest and a local upload bundle to begin.</span>
+      </div>
+      <div class="toolbar">
+        <span class="pill">Corpus loaded <strong id="corpus-status">no</strong></span>
+        <span class="pill">Upload loaded <strong id="upload-status">no</strong></span>
+        <span class="pill">Corpus matches <strong id="corpus-match-count">0</strong></span>
+        <span class="pill">Within upload <strong id="within-match-count">0</strong></span>
+        <span class="pill">Current <strong id="current-index">0</strong> / <span id="current-total">0</span></span>
+      </div>
+      <div class="field-row">
+        <label for="view-select">View</label>
+        <select id="view-select">
+          <option value="corpus">Upload vs corpus</option>
+          <option value="within">Within upload</option>
+        </select>
+        <label for="category-filter">Category</label>
+        <select id="category-filter">
+          <option value="all">All categories</option>
+        </select>
+        <button id="prev-button" class="ghost">Prev</button>
+        <button id="next-button" class="ghost">Next</button>
+      </div>
+      <div class="toolbar">
+        <span class="pill">Similarity <strong id="embedding-score">0.0000</strong></span>
+        <span class="pill">Lexical overlap <strong id="lexical-score">0.000</strong></span>
+        <span class="pill">Same normalized answer <strong id="same-answer">false</strong></span>
+        <span class="pill">Pair type <strong id="pair-type">none</strong></span>
+      </div>
+    </section>
+
+    <div class="grid">
+      <section class="panel">
+        <h2>Question A</h2>
+        <div class="meta">
+          <div><strong id="qid-a"></strong></div>
+          <div><span id="origin-a-tournament"></span> | <span id="origin-a-round"></span></div>
+          <div><span id="source-a"></span> | <span id="category-a"></span> | <span id="type-a"></span> | <span id="answer-mode-a"></span></div>
+        </div>
+        <div class="question" id="question-a"></div>
+        <div class="choices" id="choices-a"></div>
+        <div class="answer" id="answer-a"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Question B</h2>
+        <div class="meta">
+          <div><strong id="qid-b"></strong></div>
+          <div><span id="origin-b-tournament"></span> | <span id="origin-b-round"></span></div>
+          <div><span id="source-b"></span> | <span id="category-b"></span> | <span id="type-b"></span> | <span id="answer-mode-b"></span></div>
+        </div>
+        <div class="question" id="question-b"></div>
+        <div class="choices" id="choices-b"></div>
+        <div class="answer" id="answer-b"></div>
+      </section>
+    </div>
+
+    <section class="panel">
+      <h2>Result List</h2>
+      <div id="result-list" class="result-list">
+        <div class="empty-state">No results yet.</div>
+      </div>
+      <div class="muted" id="result-list-note"></div>
+    </section>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>

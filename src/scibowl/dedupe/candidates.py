@@ -147,7 +147,7 @@ def build_duplicate_candidates(
                 if question_a.question_id == question_b.question_id or pair_key in pair_candidates:
                     continue
 
-                pair_candidates[pair_key] = _build_candidate(question_a, question_b, score)
+                pair_candidates[pair_key] = build_candidate(question_a, question_b, score)
 
     return sorted(pair_candidates.values(), key=lambda candidate: candidate.embedding_similarity, reverse=True)
 
@@ -173,9 +173,17 @@ def lexical_overlap_score(text_a: str, text_b: str) -> float:
     return round(len(tokens_a & tokens_b) / len(tokens_a | tokens_b), 3)
 
 
-def _build_candidate(question_a: NormalizedQuestion, question_b: NormalizedQuestion, score: float) -> DuplicateCandidate:
-    ordered = sorted((question_a, question_b), key=lambda question: question.question_id)
-    first, second = ordered
+def build_candidate(
+    question_a: NormalizedQuestion,
+    question_b: NormalizedQuestion,
+    score: float,
+    *,
+    preserve_order: bool = False,
+) -> DuplicateCandidate:
+    if preserve_order:
+        first, second = question_a, question_b
+    else:
+        first, second = sorted((question_a, question_b), key=lambda question: question.question_id)
     return DuplicateCandidate(
         pair_id=f"dup__{first.question_id}__{second.question_id}",
         question_id_a=first.question_id,
