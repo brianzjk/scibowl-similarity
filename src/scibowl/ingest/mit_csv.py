@@ -70,6 +70,19 @@ class MitCsvRowError(ValueError):
     pass
 
 
+class MitCsvValidationError(ValueError):
+    def __init__(self, path: Path, errors: list[str]) -> None:
+        self.path = Path(path)
+        self.errors = errors
+        super().__init__(self._build_message())
+
+    def _build_message(self) -> str:
+        lines = [f"Found {len(self.errors)} MIT CSV validation error(s) in {self.path}:"]
+        lines.extend(f"- {error}" for error in self.errors)
+        lines.append("Fix the rows listed above and run the command again.")
+        return "\n".join(lines)
+
+
 def parse_mit_questions_csv(
     path: Path,
     *,
@@ -92,22 +105,30 @@ def parse_mit_questions_csv(
         resolved_year = year if year is not None else _infer_year(resolved_tournament) or _infer_year(resolved_source_id)
 
         questions: list[NormalizedQuestion] = []
+        errors: list[str] = []
         for row_index, row in enumerate(reader, start=1):
             if _row_is_blank(row, header_map):
                 continue
-            questions.append(
-                _parse_question_row(
-                    row,
-                    row_index=row_index,
-                    path=resolved_path,
-                    source_id=resolved_source_id,
-                    tournament=resolved_tournament,
-                    year=resolved_year,
-                    default_difficulty=default_difficulty,
-                    parser_version=parser_version,
-                    header_map=header_map,
+            if _row_should_skip_blank_question(row, header_map):
+                continue
+            try:
+                questions.append(
+                    _parse_question_row(
+                        row,
+                        row_index=row_index,
+                        path=resolved_path,
+                        source_id=resolved_source_id,
+                        tournament=resolved_tournament,
+                        year=resolved_year,
+                        default_difficulty=default_difficulty,
+                        parser_version=parser_version,
+                        header_map=header_map,
+                    )
                 )
-            )
+            except MitCsvRowError as exc:
+                errors.append(str(exc))
+    if errors:
+        raise MitCsvValidationError(resolved_path, errors)
     return questions
 
 
@@ -158,6 +179,14 @@ def _parse_question_row(
     subcategory = _get_column(row, header_map, "Subcategory")
     style_tags = ["visual_bonus"] if _normalize_header(raw_type) == "visual bonus" else []
 
+    _validate_format_consistency(
+        row,
+        header_map=header_map,
+        answer_mode=answer_mode,
+        raw_answer=raw_answer,
+        line_number=line_number,
+    )
+
     choices: list[Choice] = []
     if answer_mode == AnswerMode.MULTIPLE_CHOICE:
         choices = _parse_choices(row, header_map, line_number)
@@ -207,6 +236,35 @@ def _parse_choices(row: dict[str, str], header_map: dict[str, str], line_number:
             raise MitCsvRowError(f"Row {line_number}: multiple-choice row is missing option {label}")
         choices.append(Choice(label=label, text=text))
     return choices
+
+
+def _validate_format_consistency(
+    row: dict[str, str],
+    *,
+    header_map: dict[str, str],
+    answer_mode: AnswerMode,
+    raw_answer: str,
+    line_number: int,
+) -> None:
+    choice_values = {label: _get_column(row, header_map, label) for label in CHOICE_LABELS}
+    has_any_choice = any(choice_values.values())
+    choice_like_answer = CHOICE_ANSWER_PATTERN.match(raw_answer or "") is not None
+
+    if answer_mode == AnswerMode.MULTIPLE_CHOICE:
+        return
+
+    if has_any_choice:
+        present_labels = [label for label, value in choice_values.items() if value]
+        raise MitCsvRowError(
+            "Row "
+            f"{line_number}: Format is Short Answer, but multiple-choice option columns are filled "
+            f"({', '.join(present_labels)}). Change Format to Multiple Choice or clear W/X/Y/Z."
+        )
+    if choice_like_answer:
+        raise MitCsvRowError(
+            f"Row {line_number}: Format is Short Answer, but Answer looks like a multiple-choice label "
+            f"({raw_answer!r}). Change Format to Multiple Choice or replace the answer text."
+        )
 
 
 def _build_answer_text(
@@ -275,6 +333,13 @@ def _row_is_blank(row: dict[str, str], header_map: dict[str, str]) -> bool:
         if _clean_text(row.get(header_name)):
             return False
     return True
+
+
+def _row_should_skip_blank_question(row: dict[str, str], header_map: dict[str, str]) -> bool:
+    question = _get_column(row, header_map, "Question")
+    if question:
+        return False
+    return bool(_get_column(row, header_map, "Type") or _get_column(row, header_map, "Category"))
 
 
 def _require_value(value: str, line_number: int, column_name: str) -> str:

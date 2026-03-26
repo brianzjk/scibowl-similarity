@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 from scibowl.dedupe.browser_bundle import build_browser_corpus_bundle, build_browser_upload_bundle_from_mit_csv
@@ -9,7 +10,7 @@ from scibowl.dedupe.embedding_store import build_embedding_store, default_embedd
 from scibowl.dedupe.export import export_duplicate_candidates_csv
 from scibowl.dedupe.review_server import run_duplicate_review_server
 from scibowl.dedupe.upload_matches import default_upload_match_dir, match_uploaded_questions, write_upload_match_artifacts
-from scibowl.ingest import parse_mit_questions_csv
+from scibowl.ingest import MitCsvSchemaError, MitCsvValidationError, parse_mit_questions_csv
 from scibowl.schema.question import NormalizedQuestion
 from scibowl.utils.io import read_jsonl, write_json, write_jsonl
 
@@ -267,7 +268,11 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
-    args.func(args)
+    try:
+        args.func(args)
+    except (MitCsvSchemaError, MitCsvValidationError) as exc:
+        print(exc, file=sys.stderr)
+        raise SystemExit(1) from None
 
 
 if __name__ == "__main__":

@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from scibowl.ingest import MitCsvRowError, MitCsvSchemaError, parse_mit_questions_csv
+from scibowl.ingest import MitCsvSchemaError, MitCsvValidationError, parse_mit_questions_csv
 from scibowl.schema.common import AnswerMode, Category, QuestionType
 from scibowl.utils.ids import make_id
 
@@ -102,7 +102,48 @@ def test_parse_mit_questions_csv_rejects_bad_multiple_choice_answer_labels() -> 
         encoding="utf-8",
     )
 
-    with pytest.raises(MitCsvRowError, match="W, X, Y, or Z"):
+    with pytest.raises(MitCsvValidationError, match="W, X, Y, or Z"):
         parse_mit_questions_csv(csv_path)
+
+    shutil.rmtree(tmp_path)
+
+
+def test_parse_mit_questions_csv_skips_blank_question_rows_with_type_and_category() -> None:
+    tmp_path = _make_temp_dir()
+    csv_path = tmp_path / "draft_rows.csv"
+    csv_path.write_text(
+        "Type,Category,Format,Question,W,X,Y,Z,Answer,Accept,Do Not Accept\n"
+        "Toss-up,Math,Short Answer,,,,,,,,\n"
+        "Bonus,Math,Short Answer,What is 2 + 2?,,,,,4,,\n",
+        encoding="utf-8",
+    )
+
+    questions = parse_mit_questions_csv(csv_path, source_id="draft_test")
+
+    assert len(questions) == 1
+    assert questions[0].question_id == "draft_test_0002"
+    assert questions[0].question_text == "What is 2 + 2?"
+
+    shutil.rmtree(tmp_path)
+
+
+def test_parse_mit_questions_csv_reports_all_detected_row_errors() -> None:
+    tmp_path = _make_temp_dir()
+    csv_path = tmp_path / "format_errors.csv"
+    csv_path.write_text(
+        "Type,Category,Format,Question,W,X,Y,Z,Answer,Accept,Do Not Accept\n"
+        "Toss-up,Math,Short Answer,Pick the best value,1,2,3,4,Y,,\n"
+        "Bonus,Math,Multiple Choice,Select all that apply,,,,,2 and 3,,\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(MitCsvValidationError) as exc_info:
+        parse_mit_questions_csv(csv_path)
+
+    message = str(exc_info.value)
+    assert "Found 2 MIT CSV validation error(s)" in message
+    assert "Row 2: Format is Short Answer, but multiple-choice option columns are filled" in message
+    assert "Row 3: multiple-choice row is missing option W" in message
+    assert "Fix the rows listed above and run the command again." in message
 
     shutil.rmtree(tmp_path)
