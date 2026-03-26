@@ -103,6 +103,7 @@ If you want to publish this as a free or low-cost static site, convert the persi
 ```powershell
 python -m scibowl.cli.main build-browser-corpus-bundle `
   --embedding-store ../data/processed/embeddings/style_corpus_all_mxbai_embed_large_v1 `
+  --exclude-source-id mit_2025 `
   --output-dir docs/corpus
 ```
 
@@ -113,6 +114,8 @@ That writes:
 - `docs/corpus/<category>.embeddings.f32`
 
 The current full corpus is sharded per category, so each embedding file stays small enough for common static hosts. The website in `docs/index.html` loads `./corpus/manifest.json` by default and runs similarity search entirely in the browser.
+
+If you need to exclude a source from the published corpus, `build-embedding-store` and `build-browser-corpus-bundle` both accept repeatable `--exclude-source-id` and `--exclude-tournament` flags.
 
 This deployment model has two important properties:
 

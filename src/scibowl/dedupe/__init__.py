@@ -11,6 +11,8 @@ from .embedding_store import (
     LoadedEmbeddingStore,
     build_embedding_store,
     default_embedding_store_dir,
+    filter_loaded_embedding_store,
+    filter_questions,
     load_embedding_store,
 )
 from .export import export_duplicate_candidates_csv
@@ -39,6 +41,8 @@ __all__ = [
     "default_upload_match_dir",
     "default_embedding_store_dir",
     "export_duplicate_candidates_csv",
+    "filter_loaded_embedding_store",
+    "filter_questions",
     "load_embedding_store",
     "match_uploaded_questions",
     "mine_duplicate_candidates",

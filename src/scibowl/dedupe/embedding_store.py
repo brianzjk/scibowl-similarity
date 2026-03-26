@@ -49,6 +49,27 @@ class LoadedEmbeddingStore:
     question_index: dict[str, int]
 
 
+def filter_questions(
+    questions: list[NormalizedQuestion],
+    *,
+    exclude_source_ids: list[str] | None = None,
+    exclude_tournaments: list[str] | None = None,
+) -> list[NormalizedQuestion]:
+    normalized_source_ids = _normalize_exclusions(exclude_source_ids)
+    normalized_tournaments = _normalize_exclusions(exclude_tournaments)
+    if not normalized_source_ids and not normalized_tournaments:
+        return list(questions)
+    return [
+        question
+        for question in questions
+        if not _question_is_excluded(
+            question,
+            normalized_source_ids=normalized_source_ids,
+            normalized_tournaments=normalized_tournaments,
+        )
+    ]
+
+
 def build_embedding_store(
     questions: list[NormalizedQuestion],
     *,
@@ -132,6 +153,52 @@ def load_embedding_store(root_dir: Path, *, mmap_mode: str | None = "r") -> Load
     )
 
 
+def filter_loaded_embedding_store(
+    store: LoadedEmbeddingStore,
+    *,
+    exclude_source_ids: list[str] | None = None,
+    exclude_tournaments: list[str] | None = None,
+) -> LoadedEmbeddingStore:
+    normalized_source_ids = _normalize_exclusions(exclude_source_ids)
+    normalized_tournaments = _normalize_exclusions(exclude_tournaments)
+    if not normalized_source_ids and not normalized_tournaments:
+        return store
+
+    kept_indices = np.asarray(
+        [
+            index
+            for index, question in enumerate(store.questions)
+            if not _question_is_excluded(
+                question,
+                normalized_source_ids=normalized_source_ids,
+                normalized_tournaments=normalized_tournaments,
+            )
+        ],
+        dtype=np.int32,
+    )
+    filtered_questions = [store.questions[int(index)] for index in kept_indices]
+    filtered_embeddings = np.asarray(store.embeddings[kept_indices], dtype=np.float32)
+    filtered_category_indices = {
+        category: np.asarray(indices, dtype=np.int32)
+        for category, indices in _build_category_indices(filtered_questions).items()
+    }
+    filtered_question_index = {question.question_id: index for index, question in enumerate(filtered_questions)}
+    filtered_manifest = store.manifest.model_copy(
+        update={
+            "question_count": len(filtered_questions),
+            "counts_by_category": {category: len(indices) for category, indices in sorted(filtered_category_indices.items())},
+        }
+    )
+    return LoadedEmbeddingStore(
+        root_dir=store.root_dir,
+        manifest=filtered_manifest,
+        questions=filtered_questions,
+        embeddings=filtered_embeddings,
+        category_indices=filtered_category_indices,
+        question_index=filtered_question_index,
+    )
+
+
 def default_embedding_store_dir(questions_path: Path, *, model_name: str) -> Path:
     slug = slugify(model_name)
     base_name = Path(questions_path).stem
@@ -143,3 +210,27 @@ def _build_category_indices(questions: list[NormalizedQuestion]) -> dict[str, li
     for index, question in enumerate(questions):
         indices.setdefault(question.category.value, []).append(index)
     return indices
+
+
+def _normalize_exclusions(values: list[str] | None) -> set[str]:
+    return {_normalize_text(value) for value in values or [] if _normalize_text(value)}
+
+
+def _question_is_excluded(
+    question: NormalizedQuestion,
+    *,
+    normalized_source_ids: set[str],
+    normalized_tournaments: set[str],
+) -> bool:
+    if normalized_source_ids and _normalize_text(question.source_id) in normalized_source_ids:
+        return True
+    tournament = question.source_metadata.tournament if question.source_metadata else None
+    if normalized_tournaments and _normalize_text(tournament) in normalized_tournaments:
+        return True
+    return False
+
+
+def _normalize_text(value: str | None) -> str:
+    if value is None:
+        return ""
+    return value.strip().casefold()

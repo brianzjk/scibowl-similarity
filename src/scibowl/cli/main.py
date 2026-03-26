@@ -6,7 +6,13 @@ from pathlib import Path
 
 from scibowl.dedupe.browser_bundle import build_browser_corpus_bundle, build_browser_upload_bundle_from_mit_csv
 from scibowl.dedupe.candidates import mine_duplicate_candidates
-from scibowl.dedupe.embedding_store import build_embedding_store, default_embedding_store_dir, load_embedding_store
+from scibowl.dedupe.embedding_store import (
+    build_embedding_store,
+    default_embedding_store_dir,
+    filter_loaded_embedding_store,
+    filter_questions,
+    load_embedding_store,
+)
 from scibowl.dedupe.export import export_duplicate_candidates_csv
 from scibowl.dedupe.review_server import run_duplicate_review_server
 from scibowl.dedupe.upload_matches import default_upload_match_dir, match_uploaded_questions, write_upload_match_artifacts
@@ -56,6 +62,11 @@ def cmd_parse_mit_questions_csv(args: argparse.Namespace) -> None:
 def cmd_build_embedding_store(args: argparse.Namespace) -> None:
     questions_path = Path(args.questions)
     questions = read_jsonl(questions_path, NormalizedQuestion)
+    questions = filter_questions(
+        questions,
+        exclude_source_ids=args.exclude_source_id,
+        exclude_tournaments=args.exclude_tournament,
+    )
     output_dir = Path(args.output_dir) if args.output_dir else default_embedding_store_dir(
         questions_path,
         model_name=args.model_name,
@@ -80,6 +91,11 @@ def cmd_build_embedding_store(args: argparse.Namespace) -> None:
 
 def cmd_build_browser_corpus_bundle(args: argparse.Namespace) -> None:
     corpus_store = load_embedding_store(Path(args.embedding_store))
+    corpus_store = filter_loaded_embedding_store(
+        corpus_store,
+        exclude_source_ids=args.exclude_source_id,
+        exclude_tournaments=args.exclude_tournament,
+    )
     manifest = build_browser_corpus_bundle(
         corpus_store,
         output_dir=Path(args.output_dir),
@@ -185,6 +201,8 @@ def build_parser() -> argparse.ArgumentParser:
     build_embedding_store_cmd.add_argument("--batch-size", type=int, default=32)
     build_embedding_store_cmd.add_argument("--device")
     build_embedding_store_cmd.add_argument("--cache-folder")
+    build_embedding_store_cmd.add_argument("--exclude-source-id", action="append", default=[])
+    build_embedding_store_cmd.add_argument("--exclude-tournament", action="append", default=[])
     build_embedding_store_cmd.add_argument(
         "--include-answer",
         action=argparse.BooleanOptionalAction,
@@ -195,6 +213,8 @@ def build_parser() -> argparse.ArgumentParser:
     build_browser_corpus_bundle_cmd = subparsers.add_parser("build-browser-corpus-bundle")
     build_browser_corpus_bundle_cmd.add_argument("--embedding-store", required=True)
     build_browser_corpus_bundle_cmd.add_argument("--output-dir", required=True)
+    build_browser_corpus_bundle_cmd.add_argument("--exclude-source-id", action="append", default=[])
+    build_browser_corpus_bundle_cmd.add_argument("--exclude-tournament", action="append", default=[])
     build_browser_corpus_bundle_cmd.set_defaults(func=cmd_build_browser_corpus_bundle)
 
     build_browser_upload_bundle_cmd = subparsers.add_parser("build-browser-upload-bundle")
