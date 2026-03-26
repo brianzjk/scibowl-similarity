@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>__APP_TITLE__</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f0e6;
+      --panel: #fffdf8;
+      --ink: #1c1b18;
+      --muted: #6a675f;
+      --line: #d8cfc1;
+      --accent: #195c4d;
+      --accent-2: #8f2d56;
+      --warn: #aa6c00;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+      background:
+        radial-gradient(circle at top left, rgba(25,92,77,0.12), transparent 28%),
+        linear-gradient(180deg, #f7f2e8 0%, var(--bg) 100%);
+      color: var(--ink);
+    }
+    .shell {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 20px;
+      display: grid;
+      gap: 16px;
+    }
+    .topbar, .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: 0 12px 30px rgba(28,27,24,0.06);
+    }
+    .topbar {
+      padding: 18px 20px;
+      display: grid;
+      gap: 12px;
+    }
+    .title-row, .status-row, .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    h1 {
+      margin: 0;
+      font-size: 28px;
+    }
+    .pill {
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 14px;
+      background: rgba(255,255,255,0.65);
+    }
+    .pill strong { color: var(--ink); }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+    select, input, button, textarea {
+      font: inherit;
+    }
+    select, input, button {
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #fff;
+      padding: 10px 14px;
+    }
+    .threshold-input {
+      width: 96px;
+    }
+    button {
+      cursor: pointer;
+      transition: transform 120ms ease, background 120ms ease;
+    }
+    button:hover { transform: translateY(-1px); }
+    button.primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    button.secondary {
+      background: #fff7f0;
+      border-color: #e2c6ab;
+    }
+    button.ghost {
+      background: transparent;
+    }
+    .decision-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .decision-bar button[data-label="duplicate_question"] {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .decision-bar button[data-label="similar_material"] {
+      background: var(--accent-2);
+      color: #fff;
+      border-color: var(--accent-2);
+    }
+    .decision-bar button[data-label="false_positive"] {
+      background: #fff6dd;
+      border-color: #e1c370;
+      color: #7b5800;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .panel {
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+    }
+    .panel h2 {
+      margin: 0;
+      font-size: 20px;
+    }
+    .meta {
+      display: grid;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .meta strong { color: var(--ink); }
+    .question, .answer, .choices {
+      background: rgba(25,92,77,0.04);
+      border: 1px solid rgba(25,92,77,0.12);
+      border-radius: 14px;
+      padding: 14px;
+      white-space: pre-wrap;
+      line-height: 1.5;
+    }
+    .answer {
+      background: rgba(143,45,86,0.05);
+      border-color: rgba(143,45,86,0.14);
+    }
+    .choices {
+      background: rgba(170,108,0,0.06);
+      border-color: rgba(170,108,0,0.16);
+    }
+    .notes-panel {
+      display: grid;
+      gap: 12px;
+    }
+    textarea {
+      width: 100%;
+      min-height: 110px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      padding: 12px;
+      resize: vertical;
+      background: #fff;
+    }
+    .inline-label {
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .hidden { display: none; }
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="topbar">
+      <div class="title-row">
+        <div>
+          <h1>__APP_TITLE__</h1>
+          <div class="inline-label">Keyboard: <strong>1</strong> duplicate, <strong>2</strong> similar, <strong>3</strong> false positive, <strong>J</strong>/<strong>K</strong> next/prev</div>
+        </div>
+        <div class="decision-bar">
+          <button data-label="duplicate_question">1 Duplicate Question</button>
+          <button data-label="similar_material">2 Similar Material</button>
+          <button data-label="false_positive">3 False Positive</button>
+          <button id="clear-review" class="ghost">Clear</button>
+        </div>
+      </div>
+      <div class="status-row">
+        <div class="controls">
+          <span class="pill"><strong id="current-index">0</strong> / <span id="current-total">0</span></span>
+          <span class="pill">Reviewed <strong id="reviewed-count">0</strong></span>
+          <span class="pill">Remaining <strong id="remaining-count">0</strong></span>
+          <span class="pill">Current label <strong id="current-label">none</strong></span>
+        </div>
+        <div class="controls">
+          <label class="inline-label" for="filter">Filter</label>
+          <select id="filter">
+            <option value="unreviewed">Unreviewed</option>
+            <option value="all">All</option>
+            <option value="reviewed">Reviewed</option>
+          </select>
+          <label class="inline-label" for="similarity-threshold">Min similarity</label>
+          <input id="similarity-threshold" class="threshold-input" type="number" min="0" max="1" step="0.001" value="0.900">
+          <button id="apply-threshold" class="ghost">Apply</button>
+          <button id="prev-button" class="secondary">Prev</button>
+          <button id="next-button" class="secondary">Next</button>
+        </div>
+      </div>
+      <div class="controls-row">
+        <div class="controls">
+          <span class="pill">Min similarity <strong id="threshold-display">0.900</strong></span>
+          <span class="pill">Similarity <strong id="embedding-score">0.0000</strong></span>
+          <span class="pill">Lexical overlap <strong id="lexical-score">0.000</strong></span>
+          <span class="pill">Same normalized answer <strong id="same-answer">false</strong></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <section class="panel">
+        <h2>Question A</h2>
+        <div class="meta">
+          <div><strong id="qid-a"></strong></div>
+          <div><span id="origin-a-tournament"></span> • <span id="origin-a-round"></span></div>
+          <div><span id="source-a"></span> • <span id="category-a"></span> • <span id="type-a"></span> • <span id="answer-mode-a"></span></div>
+        </div>
+        <div class="question" id="question-a"></div>
+        <div class="choices" id="choices-a"></div>
+        <div class="answer" id="answer-a"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Question B</h2>
+        <div class="meta">
+          <div><strong id="qid-b"></strong></div>
+          <div><span id="origin-b-tournament"></span> • <span id="origin-b-round"></span></div>
+          <div><span id="source-b"></span> • <span id="category-b"></span> • <span id="type-b"></span> • <span id="answer-mode-b"></span></div>
+        </div>
+        <div class="question" id="question-b"></div>
+        <div class="choices" id="choices-b"></div>
+        <div class="answer" id="answer-b"></div>
+      </section>
+    </div>
+
+    <section class="panel notes-panel">
+      <h2>Notes</h2>
+      <textarea id="notes" placeholder="Add optional reviewer notes here."></textarea>
+      <div class="controls">
+        <button id="save-notes" class="primary">Save Notes</button>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    let sessionItems = [];
+    let currentIndex = 0;
+    let currentPairId = null;
+
+    async function fetchJson(url, options = {}) {
+      const response = await fetch(url, {
+        headers: { "Content-Type": "application/json" },
+        ...options,
+      });
+      if (!response.ok) {
+        throw new Error(`Request failed: ${response.status}`);
+      }
+      return response.json();
+    }
+
+    function setText(id, value) {
+      document.getElementById(id).textContent = value ?? "";
+    }
+
+    function renderChoices(id, choices) {
+      const element = document.getElementById(id);
+      if (!choices || choices.length === 0) {
+        element.textContent = "";
+        element.classList.add("hidden");
+        return;
+      }
+      element.textContent = choices.map((choice) => `${choice.label}) ${choice.text}`).join("\n");
+      element.classList.remove("hidden");
+    }
+
+    function getSimilarityThreshold() {
+      const value = Number.parseFloat(document.getElementById("similarity-threshold").value);
+      return Number.isFinite(value) ? Math.min(Math.max(value, 0), 1) : 0;
+    }
+
+    function setSummary() {
+      const reviewed = sessionItems.filter((item) => item.review_status === "reviewed").length;
+      setText("reviewed-count", reviewed);
+      setText("remaining-count", sessionItems.length - reviewed);
+      setText("threshold-display", getSimilarityThreshold().toFixed(3));
+    }
+
+    function currentItem() {
+      return sessionItems[currentIndex] ?? null;
+    }
+
+    async function loadSession() {
+      const filter = document.getElementById("filter").value;
+      const threshold = getSimilarityThreshold();
+      window.localStorage.setItem("duplicate-review:min-similarity", threshold.toFixed(3));
+      const payload = await fetchJson(
+        `/api/session?filter=${encodeURIComponent(filter)}&min_similarity=${encodeURIComponent(threshold.toFixed(3))}`
+      );
+      sessionItems = payload.items;
+      setSummary();
+      if (currentIndex >= sessionItems.length) {
+        currentIndex = Math.max(sessionItems.length - 1, 0);
+      }
+      if (sessionItems.length === 0) {
+        currentPairId = null;
+        renderEmpty();
+        return;
+      }
+      await loadCandidate(sessionItems[currentIndex].pair_id);
+    }
+
+    async function loadCandidate(pairId) {
+      const candidate = await fetchJson(`/api/candidate/${encodeURIComponent(pairId)}`);
+      currentPairId = pairId;
+      renderCandidate(candidate);
+    }
+
+    function renderEmpty() {
+      setText("current-index", 0);
+      setText("current-total", 0);
+      setText("current-label", "none");
+      setText("embedding-score", "0.0000");
+      setText("lexical-score", "0.000");
+      setText("same-answer", "false");
+      ["qid-a","origin-a-tournament","origin-a-round","source-a","category-a","type-a","answer-mode-a","question-a","answer-a","qid-b","origin-b-tournament","origin-b-round","source-b","category-b","type-b","answer-mode-b","question-b","answer-b"].forEach((id) => setText(id, ""));
+      renderChoices("choices-a", []);
+      renderChoices("choices-b", []);
+      document.getElementById("notes").value = "";
+    }
+
+    function renderCandidate(candidate) {
+      const pairPosition = sessionItems.findIndex((item) => item.pair_id === candidate.pair_id);
+      if (pairPosition >= 0) {
+        currentIndex = pairPosition;
+      }
+      setText("current-index", sessionItems.length ? currentIndex + 1 : 0);
+      setText("current-total", sessionItems.length);
+      setText("current-label", candidate.label ?? "none");
+      setText("embedding-score", candidate.embedding_similarity.toFixed(4));
+      setText("lexical-score", candidate.lexical_overlap.toFixed(3));
+      setText("same-answer", String(candidate.same_normalized_answer));
+
+      setText("qid-a", candidate.question_id_a);
+      setText("origin-a-tournament", candidate.origin_a.tournament);
+      setText("origin-a-round", candidate.origin_a.round);
+      setText("source-a", candidate.source_id_a);
+      setText("category-a", candidate.category);
+      setText("type-a", candidate.question_type_a);
+      setText("answer-mode-a", candidate.answer_mode_a);
+      setText("question-a", candidate.question_text_a);
+      renderChoices("choices-a", candidate.choices_a ?? []);
+      setText("answer-a", candidate.answer_text_a);
+
+      setText("qid-b", candidate.question_id_b);
+      setText("origin-b-tournament", candidate.origin_b.tournament);
+      setText("origin-b-round", candidate.origin_b.round);
+      setText("source-b", candidate.source_id_b);
+      setText("category-b", candidate.category);
+      setText("type-b", candidate.question_type_b);
+      setText("answer-mode-b", candidate.answer_mode_b);
+      setText("question-b", candidate.question_text_b);
+      renderChoices("choices-b", candidate.choices_b ?? []);
+      setText("answer-b", candidate.answer_text_b);
+
+      document.getElementById("notes").value = candidate.notes ?? "";
+    }
+
+    async function submitReview(label) {
+      if (!currentPairId) return;
+      const payload = await fetchJson("/api/review", {
+        method: "POST",
+        body: JSON.stringify({
+          pair_id: currentPairId,
+          label,
+          notes: document.getElementById("notes").value,
+        }),
+      });
+      const item = sessionItems.find((entry) => entry.pair_id === currentPairId);
+      if (item) {
+        item.label = label;
+        item.review_status = label ? "reviewed" : "candidate";
+      }
+      if (document.getElementById("filter").value !== "all") {
+        await loadSession();
+        return;
+      }
+      setSummary();
+      renderCandidate(payload.candidate);
+    }
+
+    function move(delta) {
+      if (!sessionItems.length) return;
+      currentIndex = Math.min(Math.max(currentIndex + delta, 0), sessionItems.length - 1);
+      loadCandidate(sessionItems[currentIndex].pair_id);
+    }
+
+    document.getElementById("filter").addEventListener("change", () => {
+      currentIndex = 0;
+      loadSession();
+    });
+    document.getElementById("apply-threshold").addEventListener("click", () => {
+      currentIndex = 0;
+      loadSession();
+    });
+    document.getElementById("similarity-threshold").addEventListener("change", () => {
+      currentIndex = 0;
+      loadSession();
+    });
+    document.getElementById("prev-button").addEventListener("click", () => move(-1));
+    document.getElementById("next-button").addEventListener("click", () => move(1));
+    document.getElementById("save-notes").addEventListener("click", () => submitReview(currentItem()?.label ?? null));
+    document.getElementById("clear-review").addEventListener("click", () => submitReview(null));
+    document.querySelectorAll(".decision-bar button[data-label]").forEach((button) => {
+      button.addEventListener("click", () => submitReview(button.dataset.label));
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.target.tagName === "TEXTAREA") return;
+      if (event.key === "1") submitReview("duplicate_question");
+      if (event.key === "2") submitReview("similar_material");
+      if (event.key === "3") submitReview("false_positive");
+      if (event.key.toLowerCase() === "j") move(1);
+      if (event.key.toLowerCase() === "k") move(-1);
+    });
+
+    const savedThreshold = window.localStorage.getItem("duplicate-review:min-similarity");
+    if (savedThreshold) {
+      document.getElementById("similarity-threshold").value = savedThreshold;
+    }
+    loadSession();
+  </script>
+</body>
+</html>
