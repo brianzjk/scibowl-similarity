@@ -183,7 +183,6 @@ def _parse_question_row(
         row,
         header_map=header_map,
         answer_mode=answer_mode,
-        raw_answer=raw_answer,
         line_number=line_number,
     )
 
@@ -243,12 +242,10 @@ def _validate_format_consistency(
     *,
     header_map: dict[str, str],
     answer_mode: AnswerMode,
-    raw_answer: str,
     line_number: int,
 ) -> None:
     choice_values = {label: _get_column(row, header_map, label) for label in CHOICE_LABELS}
     has_any_choice = any(choice_values.values())
-    choice_like_answer = CHOICE_ANSWER_PATTERN.match(raw_answer or "") is not None
 
     if answer_mode == AnswerMode.MULTIPLE_CHOICE:
         return
@@ -259,11 +256,6 @@ def _validate_format_consistency(
             "Row "
             f"{line_number}: Format is Short Answer, but multiple-choice option columns are filled "
             f"({', '.join(present_labels)}). Change Format to Multiple Choice or clear W/X/Y/Z."
-        )
-    if choice_like_answer:
-        raise MitCsvRowError(
-            f"Row {line_number}: Format is Short Answer, but Answer looks like a multiple-choice label "
-            f"({raw_answer!r}). Change Format to Multiple Choice or replace the answer text."
         )
 
 

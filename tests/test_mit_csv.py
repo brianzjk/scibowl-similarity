@@ -147,3 +147,21 @@ def test_parse_mit_questions_csv_reports_all_detected_row_errors() -> None:
     assert "Fix the rows listed above and run the command again." in message
 
     shutil.rmtree(tmp_path)
+
+
+def test_parse_mit_questions_csv_allows_short_answer_letter_without_choices() -> None:
+    tmp_path = _make_temp_dir()
+    csv_path = tmp_path / "letter_answer.csv"
+    csv_path.write_text(
+        "Type,Category,Format,Question,W,X,Y,Z,Answer,Accept,Do Not Accept\n"
+        "Bonus,Math,Short Answer,Which corner is reached first?,,,,,X,,\n",
+        encoding="utf-8",
+    )
+
+    questions = parse_mit_questions_csv(csv_path, source_id="letter_answer")
+
+    assert len(questions) == 1
+    assert questions[0].answer_mode == AnswerMode.SHORT_ANSWER
+    assert questions[0].answer_text == "ANSWER: X"
+
+    shutil.rmtree(tmp_path)
